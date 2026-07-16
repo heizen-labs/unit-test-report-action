@@ -1,0 +1,15 @@
+{
+  "name": "unit-test-report-action",
+  "version": "1.0.0",
+  "description": "GitHub Action that runs unit tests and posts a coverage + pass/fail report to Heizen Studio.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "check": "node --check scripts/collect-and-post.mjs",
+    "test": "node test/smoke.mjs"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}

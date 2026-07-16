@@ -1,0 +1,46 @@
+name: "Unit Test Report"
+description: "Run unit tests for one or more apps and post a coverage + pass/fail report to Heizen Studio."
+author: "Heizen"
+
+branding:
+  icon: "check-circle"
+  color: "green"
+
+inputs:
+  api-key:
+    description: "Studio API key. Sent as the auth header (see header-name)."
+    required: true
+  base-url:
+    description: "Base URL of the report service. The report is POSTed to {base-url}/unit-testcases/report."
+    required: false
+    default: "https://api.studio.heizen.work"
+  apps:
+    description: >
+      JSON array of apps to test. Each entry supports:
+      { "name": string, "directory": string, "testCommand"?: string,
+      "resultsFile"?: string, "coverageFile"?: string }.
+      testCommand defaults to default-test-command; resultsFile defaults to
+      "test-results.json"; coverageFile defaults to "coverage/coverage-summary.json".
+      resultsFile and coverageFile are resolved relative to directory.
+    required: true
+  default-test-command:
+    description: "Test command run in each app's directory when the app does not set its own testCommand. Must emit vitest JSON results and a json-summary coverage report."
+    required: false
+    default: "pnpm vitest run --coverage --coverage.reporter=json-summary --reporter=json --outputFile=test-results.json"
+  header-name:
+    description: "HTTP header used to send the API key."
+    required: false
+    default: "x-api-key"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run tests and post report
+      shell: bash
+      env:
+        REPORT_API_KEY: ${{ inputs.api-key }}
+        REPORT_BASE_URL: ${{ inputs.base-url }}
+        REPORT_APPS: ${{ inputs.apps }}
+        REPORT_DEFAULT_TEST_COMMAND: ${{ inputs.default-test-command }}
+        REPORT_HEADER_NAME: ${{ inputs.header-name }}
+      run: node "$GITHUB_ACTION_PATH/scripts/collect-and-post.mjs"
