@@ -4,8 +4,10 @@ import {
 	buildPayload,
 	buildTestCommand,
 	detectFramework,
+	failureReasons,
 	mergeCoverage,
 	parseApps,
+	parseBoolean,
 	resolveApps,
 	testsFromResults,
 } from "../scripts/collect-and-post.mjs";
@@ -343,6 +345,54 @@ await checkAsync("buildPayload reports null tests for missing files", async () =
 	]);
 	assert.equal(payload.apps.missing.tests, null);
 	assert.equal(payload.summary.success, false);
+});
+
+const payloadWith = (tests) => ({ summary: { tests } });
+const clean = {
+	total: 10,
+	failed: 0,
+	suites: { total: 2, passed: 2, failed: 0 },
+};
+
+check("failureReasons passes a clean run", () => {
+	assert.deepEqual(failureReasons(payloadWith(clean), [{ name: "a", status: 0 }]), []);
+});
+
+check("failureReasons flags failed tests and suites", () => {
+	const reasons = failureReasons(
+		payloadWith({ total: 10, failed: 3, suites: { total: 2, passed: 1, failed: 1 } }),
+		[{ name: "a", status: 1 }],
+	);
+	assert.deepEqual(reasons, ["3 tests failed", "1 suite failed"]);
+});
+
+// The Raphe case: the runner started, loaded nothing, and reported zero tests.
+check("failureReasons flags a run that collected no tests", () => {
+	const reasons = failureReasons(
+		payloadWith({ total: 0, failed: 0, suites: { total: 53, passed: 0, failed: 53 } }),
+		[{ name: "server", status: 1 }],
+	);
+	assert.deepEqual(reasons, ["53 suites failed", "no tests were collected"]);
+});
+
+// A runner that dies without writing a failing report must not pass silently.
+check("failureReasons falls back to the runner exit code", () => {
+	const reasons = failureReasons(payloadWith(clean), [
+		{ name: "web", status: 137 },
+	]);
+	assert.deepEqual(reasons, ["web exited with code 137"]);
+});
+
+check("failureReasons ignores apps with no command", () => {
+	assert.deepEqual(failureReasons(payloadWith(clean), [{ name: "a", status: null }]), []);
+});
+
+check("parseBoolean reads GitHub input strings", () => {
+	assert.equal(parseBoolean("true", false), true);
+	assert.equal(parseBoolean("false", true), false);
+	assert.equal(parseBoolean("", true), true, "unset falls back to the default");
+	assert.equal(parseBoolean(undefined, true), true);
+	assert.equal(parseBoolean("nonsense", true), true, "garbage falls back");
 });
 
 if (process.exitCode) {

@@ -52,6 +52,13 @@ inputs:
     description: "Full test command run in each app's directory when the app sets neither testCommand nor testScript. Unlike test-script this is run verbatim, so it must itself emit a Jest/Vitest-shaped JSON report and a json-summary coverage report."
     required: false
     default: ""
+  fail-on-test-failure:
+    description: >
+      Fail the step when tests fail, no tests are collected, or a runner exits
+      non-zero. The report is always posted first, so failures still reach
+      Studio. Set to "false" to report without failing the workflow.
+    required: false
+    default: "true"
   header-name:
     description: "HTTP header used to send the API key."
     required: false
@@ -70,5 +77,6 @@ runs:
         REPORT_TEST_SCRIPT: ${{ inputs.test-script }}
         REPORT_FRAMEWORK: ${{ inputs.framework }}
         REPORT_PACKAGE_MANAGER: ${{ inputs.package-manager }}
+        REPORT_FAIL_ON_TEST_FAILURE: ${{ inputs.fail-on-test-failure }}
         REPORT_HEADER_NAME: ${{ inputs.header-name }}
       run: node "$GITHUB_ACTION_PATH/scripts/collect-and-post.mjs"

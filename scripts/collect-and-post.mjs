@@ -57,6 +57,7 @@ const {
 	REPORT_TEST_SCRIPT,
 	REPORT_FRAMEWORK,
 	REPORT_PACKAGE_MANAGER,
+	REPORT_FAIL_ON_TEST_FAILURE,
 	REPORT_HEADER_NAME,
 	GITHUB_SHA,
 	GITHUB_REF_NAME,
@@ -202,7 +203,7 @@ async function resolveApps(apps) {
 function runTests(app) {
 	if (!app.testCommand) {
 		console.warn(`No test command for ${app.name}; skipping test run.`);
-		return;
+		return null;
 	}
 	const label = app.framework ? `${app.name} (${app.framework})` : app.name;
 	console.log(`::group::Running tests for ${label}`);
@@ -224,6 +225,42 @@ function runTests(app) {
 			`::warning::Tests for ${app.name} exited with code ${result.status} — command: ${app.testCommand}`,
 		);
 	}
+	return result.error ? null : result.status;
+}
+
+// Why the step should go red, in reporting terms. Empty means the run passed.
+function failureReasons(payload, runs = []) {
+	const reasons = [];
+	const { tests } = payload.summary;
+
+	if (tests.failed > 0) {
+		reasons.push(`${tests.failed} test${tests.failed === 1 ? "" : "s"} failed`);
+	}
+	if (tests.suites.failed > 0) {
+		reasons.push(
+			`${tests.suites.failed} suite${tests.suites.failed === 1 ? "" : "s"} failed`,
+		);
+	}
+	if (tests.total === 0) {
+		reasons.push("no tests were collected");
+	}
+	// A runner that dies without writing a failing report would otherwise pass.
+	if (!reasons.length) {
+		for (const run of runs) {
+			if (run.status !== null && run.status !== 0) {
+				reasons.push(`${run.name} exited with code ${run.status}`);
+			}
+		}
+	}
+	return reasons;
+}
+
+function parseBoolean(value, fallback) {
+	if (value == null || String(value).trim() === "") return fallback;
+	const normalized = String(value).trim().toLowerCase();
+	if (["true", "1", "yes"].includes(normalized)) return true;
+	if (["false", "0", "no"].includes(normalized)) return false;
+	return fallback;
 }
 
 async function readJson(path) {
@@ -391,7 +428,10 @@ async function buildPayload(appConfigs) {
 async function main() {
 	const appConfigs = await resolveApps(parseApps());
 
-	for (const app of appConfigs) runTests(app);
+	const runs = appConfigs.map((app) => ({
+		name: app.name,
+		status: runTests(app),
+	}));
 
 	const payload = await buildPayload(appConfigs);
 
@@ -453,6 +493,21 @@ async function main() {
 
 	console.log(`Report posted to ${url} (${response.status})`);
 	if (text) console.log(`Response: ${text}`);
+
+	// Only after the report is safely posted: the point of failing the step is
+	// visibility, not withholding the report.
+	const reasons = failureReasons(payload, runs);
+	if (reasons.length && parseBoolean(REPORT_FAIL_ON_TEST_FAILURE, true)) {
+		console.log(`::error::Unit tests failed — ${reasons.join("; ")}.`);
+		console.error(
+			`Failing the step because ${reasons.join("; ")}. The report was posted first. Set 'fail-on-test-failure: false' to report without failing.`,
+		);
+		process.exitCode = 1;
+	} else if (reasons.length) {
+		console.log(
+			`::warning::Unit tests failed — ${reasons.join("; ")}. Not failing the step ('fail-on-test-failure' is false).`,
+		);
+	}
 }
 
 export {
@@ -463,6 +518,8 @@ export {
 	buildPayload,
 	mergeCoverage,
 	testsFromResults,
+	failureReasons,
+	parseBoolean,
 };
 
 const invokedDirectly =

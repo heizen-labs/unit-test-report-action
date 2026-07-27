@@ -84,6 +84,7 @@ A ready-to-copy version lives in [`examples/consumer-workflow.yml`](./examples/c
 | `framework` | | `auto` | `vitest`, `jest`, or `auto` to detect per app. |
 | `package-manager` | | `pnpm` | `pnpm`, `npm`, `yarn`, or `bun`. Used to run scripts and binaries. |
 | `default-test-command` | | — | Full command run verbatim in each app's directory. Only needed when neither the framework defaults nor `test-script` fit. |
+| `fail-on-test-failure` | | `true` | Fail the step when tests fail. The report is posted first either way. |
 | `header-name` | | `x-api-key` | HTTP header used to send the API key. |
 
 ## The `apps` input
@@ -197,7 +198,19 @@ Combined `summary` numbers are aggregated across all apps; per-app detail is und
 
 ## Behavior
 
-- **Failures are still reported.** Tests run even if a suite fails; the report is posted so failures show up in Studio.
+- **Failures are reported *and* fail the step.** The report is always POSTed first, so failures reach Studio; the step then exits non-zero so the PR goes red. The step fails when any test fails, any suite fails, **no tests are collected at all**, or a runner exits non-zero without writing a failing report. Set `fail-on-test-failure: false` to post without failing.
+
+  Because the report is posted before the step fails, this replaces a separate test step — you don't need to run your suite twice to both gate the PR and report it:
+
+  ```yaml
+        - name: Run unit tests and post report
+          uses: heizen-labs/unit-test-report-action@v1
+          with:
+            api-key: ${{ secrets.HEIZEN_STUDIO_API_KEY }}
+            test-script: test:unit
+            apps: |
+              [{ "name": "server", "directory": "apps/server" }]
+  ```
 - **No silent empty reports.** If **no** app produces results, the action fails instead of posting an empty (green-looking) report. If only some apps produce results, it warns and posts a partial report.
 - **`generatedAt`** is stamped at report time, so it is always present for both `push` and manual `workflow_dispatch` runs.
 - **Source metadata** is read from the standard `GITHUB_*` environment variables provided by the runner.
