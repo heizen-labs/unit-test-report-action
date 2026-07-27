@@ -213,8 +213,16 @@ function runTests(app) {
 		stdio: "inherit",
 	});
 	console.log("::endgroup::");
-	if (result.status !== 0) {
-		console.warn(`Tests for ${app.name} exited with code ${result.status}.`);
+	if (result.error) {
+		console.log(
+			`::warning::Could not run tests for ${app.name}: ${result.error.message}`,
+		);
+	} else if (result.status !== 0) {
+		// An annotation rather than a plain log: the run is collapsed by default
+		// and a runner that fails to start otherwise looks like a passing report.
+		console.log(
+			`::warning::Tests for ${app.name} exited with code ${result.status} — command: ${app.testCommand}`,
+		);
 	}
 }
 
@@ -276,6 +284,13 @@ function testsFromResults(results) {
 	};
 }
 
+// Istanbul writes the string "Unknown" for pct when nothing was instrumented,
+// so every numeric field is coerced rather than passed through.
+function numeric(value) {
+	const n = Number(value);
+	return Number.isFinite(n) ? n : 0;
+}
+
 function coverageFromSummary(summary) {
 	if (!summary?.total) return null;
 	return Object.fromEntries(
@@ -284,10 +299,10 @@ function coverageFromSummary(summary) {
 			return [
 				metric,
 				{
-					total: m.total ?? 0,
-					covered: m.covered ?? 0,
-					skipped: m.skipped ?? 0,
-					pct: m.pct ?? 0,
+					total: numeric(m.total),
+					covered: numeric(m.covered),
+					skipped: numeric(m.skipped),
+					pct: numeric(m.pct),
 				},
 			];
 		}),
@@ -358,7 +373,14 @@ async function buildPayload(appConfigs) {
 			runId: GITHUB_RUN_ID ?? null,
 		},
 		summary: {
-			success: testList.length > 0 && combinedTests.failed === 0,
+			// A run only succeeded if tests actually ran and nothing failed at
+			// either level: a suite that fails to load reports zero tests, so
+			// `failed === 0` alone would call a totally broken run green.
+			success:
+				testList.length > 0 &&
+				combinedTests.total > 0 &&
+				combinedTests.failed === 0 &&
+				combinedTests.suites.failed === 0,
 			tests: combinedTests,
 			coverage: mergeCoverage(coverageList),
 		},
@@ -386,10 +408,23 @@ async function main() {
 		);
 	}
 
-	if (collectedApps.length < appConfigs.length) {
-		console.warn(
-			`Warning: results found only for [${collectedApps.join(", ")}]. Posting a partial report.`,
+	const missingApps = Object.entries(payload.apps)
+		.filter(([, app]) => !app.tests)
+		.map(([name]) => name);
+
+	if (missingApps.length) {
+		console.log(
+			`::warning::No test results for [${missingApps.join(", ")}]. Posting a partial report — check the command echoed in each app's log group.`,
 		);
+	}
+
+	// Suites that fail to load report zero tests, which reads as a clean run.
+	for (const [name, app] of Object.entries(payload.apps)) {
+		if (app.tests && app.tests.total === 0) {
+			console.log(
+				`::error::${name} collected 0 tests from ${app.tests.suites.total} suites (${app.tests.suites.failed} failed to run). The runner started but could not execute any test — usually a config or setup the app's own test script provides.`,
+			);
+		}
 	}
 
 	if (!REPORT_API_KEY) {

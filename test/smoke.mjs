@@ -285,6 +285,53 @@ await checkAsync("buildPayload merges jest and vitest apps together", async () =
 	assert.equal(payload.summary.success, false);
 });
 
+// A runner that starts but cannot load any suite reports 0 tests and N failed
+// suites. Counting only failed *tests* called that a success.
+await checkAsync("buildPayload fails a run where every suite failed to load", async () => {
+	const brokenDir = fileURLToPath(new URL("./fixtures/broken-app", import.meta.url));
+	const payload = await buildPayload([
+		{
+			name: "server",
+			directory: brokenDir,
+			resultsFile: "test-results.json",
+			coverageFile: "coverage/coverage-summary.json",
+		},
+	]);
+	assert.equal(payload.summary.tests.total, 0);
+	assert.equal(payload.summary.tests.suites.failed, 53);
+	assert.equal(payload.summary.success, false);
+});
+
+// Istanbul writes "Unknown" for pct when nothing was instrumented.
+await checkAsync("buildPayload coerces non-numeric coverage pct", async () => {
+	const brokenDir = fileURLToPath(new URL("./fixtures/broken-app", import.meta.url));
+	const payload = await buildPayload([
+		{
+			name: "server",
+			directory: brokenDir,
+			resultsFile: "test-results.json",
+			coverageFile: "coverage/coverage-summary.json",
+		},
+	]);
+	for (const metric of ["lines", "statements", "functions", "branches"]) {
+		const pct = payload.apps.server.coverage[metric].pct;
+		assert.equal(typeof pct, "number", `${metric} pct is a number`);
+		assert.equal(pct, 0);
+	}
+});
+
+await checkAsync("buildPayload keeps success true for a clean run", async () => {
+	const payload = await buildPayload([
+		{
+			name: "demo",
+			directory: fixtureDir,
+			resultsFile: "test-results.json",
+			coverageFile: "coverage/coverage-summary.json",
+		},
+	]);
+	assert.equal(payload.summary.success, true);
+});
+
 await checkAsync("buildPayload reports null tests for missing files", async () => {
 	const payload = await buildPayload([
 		{
