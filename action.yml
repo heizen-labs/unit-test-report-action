@@ -17,16 +17,41 @@ inputs:
   apps:
     description: >
       JSON array of apps to test. Each entry supports:
-      { "name": string, "directory": string, "testCommand"?: string,
-      "resultsFile"?: string, "coverageFile"?: string }.
-      testCommand defaults to default-test-command; resultsFile defaults to
-      "test-results.json"; coverageFile defaults to "coverage/coverage-summary.json".
+      { "name": string, "directory": string, "framework"?: "vitest" | "jest",
+      "testScript"?: string, "testCommand"?: string, "resultsFile"?: string,
+      "coverageFile"?: string }.
+      Command precedence per app: testCommand, then testScript, then the
+      default-test-command input, then the test-script input, then the
+      framework's built-in command. framework defaults to the framework input;
+      resultsFile defaults to "test-results.json"; coverageFile defaults to
+      "coverage/coverage-summary.json".
       resultsFile and coverageFile are resolved relative to directory.
     required: true
-  default-test-command:
-    description: "Test command run in each app's directory when the app does not set its own testCommand. Must emit vitest JSON results and a json-summary coverage report."
+  test-script:
+    description: >
+      Name of your own package script to run in each app, e.g. "test:unit"
+      ("pnpm test:unit" and "npm run test:unit" are accepted too). The action
+      runs it via the package manager and appends the reporter and coverage
+      flags needed to produce the report files, so the script does not need to
+      set them itself. Used for apps that set neither testCommand nor testScript.
     required: false
-    default: "pnpm vitest run --coverage --coverage.reporter=json-summary --reporter=json --outputFile=test-results.json"
+    default: ""
+  package-manager:
+    description: "Package manager used to run scripts and binaries: pnpm, npm, yarn, or bun."
+    required: false
+    default: "pnpm"
+  framework:
+    description: >
+      Test runner used to build the default test command: "vitest", "jest", or
+      "auto" to detect it per app from its package.json dependencies, test
+      script, or config file (falling back to vitest). Ignored for apps that set
+      their own testCommand.
+    required: false
+    default: "auto"
+  default-test-command:
+    description: "Full test command run in each app's directory when the app sets neither testCommand nor testScript. Unlike test-script this is run verbatim, so it must itself emit a Jest/Vitest-shaped JSON report and a json-summary coverage report."
+    required: false
+    default: ""
   header-name:
     description: "HTTP header used to send the API key."
     required: false
@@ -42,5 +67,8 @@ runs:
         REPORT_BASE_URL: ${{ inputs.base-url }}
         REPORT_APPS: ${{ inputs.apps }}
         REPORT_DEFAULT_TEST_COMMAND: ${{ inputs.default-test-command }}
+        REPORT_TEST_SCRIPT: ${{ inputs.test-script }}
+        REPORT_FRAMEWORK: ${{ inputs.framework }}
+        REPORT_PACKAGE_MANAGER: ${{ inputs.package-manager }}
         REPORT_HEADER_NAME: ${{ inputs.header-name }}
       run: node "$GITHUB_ACTION_PATH/scripts/collect-and-post.mjs"

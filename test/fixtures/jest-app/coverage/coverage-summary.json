@@ -1,0 +1,14 @@
+{
+  "total": {
+    "lines": { "total": 20, "covered": 10, "skipped": 0, "pct": 50 },
+    "statements": { "total": 20, "covered": 10, "skipped": 0, "pct": 50 },
+    "functions": { "total": 8, "covered": 2, "skipped": 0, "pct": 25 },
+    "branches": { "total": 4, "covered": 1, "skipped": 0, "pct": 25 }
+  },
+  "/repo/apps/jest-app/src/index.js": {
+    "lines": { "total": 20, "covered": 10, "skipped": 0, "pct": 50 },
+    "statements": { "total": 20, "covered": 10, "skipped": 0, "pct": 50 },
+    "functions": { "total": 8, "covered": 2, "skipped": 0, "pct": 25 },
+    "branches": { "total": 4, "covered": 1, "skipped": 0, "pct": 25 }
+  }
+}

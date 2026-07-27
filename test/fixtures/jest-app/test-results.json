@@ -1,0 +1,82 @@
+{
+  "numTotalTestSuites": 2,
+  "numPassedTestSuites": 1,
+  "numFailedTestSuites": 1,
+  "numPendingTestSuites": 0,
+  "numRuntimeErrorTestSuites": 0,
+  "numTotalTests": 6,
+  "numPassedTests": 3,
+  "numFailedTests": 1,
+  "numPendingTests": 1,
+  "numTodoTests": 1,
+  "startTime": 1752658057000,
+  "success": false,
+  "wasInterrupted": false,
+  "testResults": [
+    {
+      "name": "/repo/apps/jest-app/src/sum.test.js",
+      "status": "passed",
+      "startTime": 1752658057100,
+      "endTime": 1752658057180,
+      "assertionResults": [
+        {
+          "ancestorTitles": ["sum"],
+          "fullName": "sum adds numbers",
+          "title": "adds numbers",
+          "status": "passed",
+          "duration": 3,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": ["sum"],
+          "fullName": "sum handles negatives",
+          "title": "handles negatives",
+          "status": "passed",
+          "duration": 1,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": ["sum"],
+          "fullName": "sum handles bigint",
+          "title": "handles bigint",
+          "status": "pending",
+          "duration": null,
+          "failureMessages": []
+        }
+      ]
+    },
+    {
+      "name": "/repo/apps/jest-app/src/parse.test.js",
+      "status": "failed",
+      "message": "● parse › rejects bad input",
+      "startTime": 1752658057200,
+      "endTime": 1752658057340,
+      "assertionResults": [
+        {
+          "ancestorTitles": ["parse"],
+          "fullName": "parse accepts good input",
+          "title": "accepts good input",
+          "status": "passed",
+          "duration": 2,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": ["parse"],
+          "fullName": "parse rejects bad input",
+          "title": "rejects bad input",
+          "status": "failed",
+          "duration": 5,
+          "failureMessages": ["Error: expected throw"]
+        },
+        {
+          "ancestorTitles": ["parse"],
+          "fullName": "parse supports streams",
+          "title": "supports streams",
+          "status": "todo",
+          "duration": null,
+          "failureMessages": []
+        }
+      ]
+    }
+  ]
+}

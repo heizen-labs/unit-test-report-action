@@ -28,6 +28,8 @@ jobs:
         uses: heizen-labs/unit-test-report-action@v1
         with:
           api-key: ${{ secrets.HEIZEN_STUDIO_API_KEY }}
+          # The runner (vitest or jest) is detected per app. To run your own
+          # package script instead, add: test-script: test:unit
           apps: |
             [
               { "name": "server", "directory": "apps/server" },

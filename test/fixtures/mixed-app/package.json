@@ -1,0 +1,11 @@
+{
+  "name": "mixed-fixture-app",
+  "private": true,
+  "scripts": {
+    "test": "jest",
+    "test:unit": "vitest run"
+  },
+  "devDependencies": {
+    "jest": "^30.0.0"
+  }
+}

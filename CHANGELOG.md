@@ -2,6 +2,37 @@
 
 All notable changes to this action are documented here.
 
+## [Unreleased]
+
+### Added
+
+- Jest support. Vitest and Jest both emit a Jest-shaped JSON report and an
+  Istanbul `json-summary`, so the report payload is unchanged either way.
+- `framework` input (`vitest` | `jest` | `auto`) and a per-app `"framework"`.
+  With `auto` (the default) the runner is detected per app from its
+  `package.json` dependencies, test script, or config file — so a monorepo can
+  mix runners — falling back to Vitest.
+- `test-script` input and a per-app `"testScript"` for pointing the action at
+  your own package script (e.g. `test:unit`). The action appends the reporter
+  and coverage flags, so the script needs no reporting flags of its own.
+  Accepts `test:unit`, `pnpm test:unit`, or `npm run test:unit`.
+- `package-manager` input (`pnpm` | `npm` | `yarn` | `bun`), used to run
+  scripts and binaries. The `--` argument separator is applied only for npm,
+  since pnpm, yarn and bun pass a literal `--` through to the runner, which
+  would silently discard every appended flag.
+- Generated commands now derive `--outputFile` and the coverage directory from
+  the app's `resultsFile` and `coverageFile`, so custom output paths work
+  without a custom command.
+- Test counts are derived from per-suite `assertionResults` when a report omits
+  the top-level totals.
+
+### Changed
+
+- `default-test-command` no longer defaults to the Vitest command; it is now
+  empty and the command is built from the resolved framework. Set it only to
+  run a full command verbatim. Existing configs that set it are unaffected.
+- The log group for each app now echoes the resolved framework and command.
+
 ## [1.0.0] - 2026-07-16
 
 ### Added
